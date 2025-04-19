@@ -56,7 +56,7 @@ A powerful real-time network traffic monitoring dashboard that provides dynamic 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/sentinel-dstat.git
+git clone https://github.com/ampedwastaken/sentinel-dstat.git
 cd sentinel-dstat
 
 # Create and activate virtual environment

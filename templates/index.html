@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sentinel-DSTAT</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background: #0a0b14;
+            --surface: #12141f;
+            --surface-lighter: #1a1d2e;
+            --primary: #6366f1;
+            --primary-darker: #4f46e5;
+            --primary-gradient: linear-gradient(135deg, #6366f1, #4f46e5);
+            --accent: #34d399;
+            --accent-gradient: linear-gradient(135deg, #34d399, #059669);
+            --text: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-tertiary: rgba(255, 255, 255, 0.5);
+            --glow: rgba(99, 102, 241, 0.15);
+            --danger: #ef4444;
+            --warning: #fbbf24;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            margin: 0;
+            background: radial-gradient(circle at top right, var(--surface), var(--background));
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+            line-height: 1.5;
+        }
+
+        .stats-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2.5rem;
+            background: linear-gradient(145deg, var(--surface), rgba(18, 20, 31, 0.9));
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            animation: container-fade 0.5s ease-out;
+        }
+
+        @keyframes container-fade {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            position: relative;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--primary-gradient);
+            opacity: 0.3;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-box {
+            background: linear-gradient(145deg, var(--surface-lighter), var(--surface));
+            padding: 1.75rem;
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 8px 24px var(--glow);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .stat-box:hover::before {
+            opacity: 1;
+        }
+
+        .label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .trend {
+            font-size: 1rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .trend.up {
+            background: rgba(52, 211, 153, 0.1);
+            color: #34d399;
+        }
+
+        .trend.down {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .stat-details {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-size: 1rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .chart-container {
+            padding: 1.75rem;
+            background: linear-gradient(145deg, var(--surface-lighter), var(--surface));
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            height: 400px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container:hover {
+            transform: scale(1.01);
+            box-shadow: 0 12px 36px var(--glow);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .stats-container {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 2rem;
+            }
+
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .value {
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stats-container">
+        <h1>Sentinel-DSTAT</h1>
+        
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="label">Incoming Bandwidth</div>
+                <div class="value">
+                    <span id="bandwidth-in">0</span>
+                    <span class="trend" id="bandwidth-in-trend"></span>
+                </div>
+                <div class="stat-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Peak</span>
+                        <span class="detail-value" id="bandwidth-peak">0</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Average</span>
+                        <span class="detail-value" id="bandwidth-avg">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="label">Incoming Packets</div>
+                <div class="value">
+                    <span id="pps-in">0</span>
+                    <span class="trend" id="pps-in-trend"></span>
+                </div>
+                <div class="stat-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Peak</span>
+                        <span class="detail-value" id="pps-peak">0</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Average</span>
+                        <span class="detail-value" id="pps-avg">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="networkChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Load configuration from server
+        const CONFIG = JSON.parse('{{ config|tojson|safe }}');
+
+        // Initialize chart with config
+        const ctx = document.getElementById('networkChart').getContext('2d');
+        Chart.defaults.color = '#ffffff';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        const formatPackets = (pps) => {
+            if (pps >= 1e9) return (pps / 1e9).toFixed(2) + 'B pps';
+            if (pps >= 1e6) return (pps / 1e6).toFixed(2) + 'M pps';
+            if (pps >= 1e3) return (pps / 1e3).toFixed(2) + 'K pps';
+            return pps + ' pps';
+        };
+
+        const networkChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(CONFIG.chart.max_data_points).fill(''),
+                datasets: [{
+                    label: 'Bandwidth',
+                    data: Array(CONFIG.chart.max_data_points).fill(0),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHoverBackgroundColor: '#6366f1',
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 2,
+                    order: 1
+                }, {
+                    label: 'Packets/s',
+                    data: Array(CONFIG.chart.max_data_points).fill(0),
+                    borderColor: '#34d399',
+                    backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHoverBackgroundColor: '#34d399',
+                    pointHoverBorderColor: '#ffffff',
+                    pointHoverBorderWidth: 2,
+                    order: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 300,
+                    easing: 'easeOutQuart'
+                },
+                interaction: {
+                    mode: 'nearest',
+                    intersect: false,
+                    axis: 'x'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)',
+                            drawBorder: false
+                        },
+                        border: {
+                            display: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                size: 11,
+                                family: "'Inter', sans-serif"
+                            },
+                            padding: 10,
+                            callback: function (value, index, values) {
+                                if (this.chart.data.datasets[index] && this.chart.data.datasets[index].label === 'Bandwidth') {
+                                    return formatBytes(value);
+                                } else {
+                                    return formatPackets(value);
+                                }
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        border: {
+                            display: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: {
+                                size: 11,
+                                family: "'Inter', sans-serif"
+                            },
+                            padding: 10,
+                            maxRotation: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            font: {
+                                size: 12,
+                                weight: '500',
+                                family: "'Inter', sans-serif"
+                            },
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 8,
+                            boxHeight: 8
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(26, 29, 46, 0.95)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: {
+                            size: 12,
+                            weight: '600',
+                            family: "'Inter', sans-serif"
+                        },
+                        bodyFont: {
+                            size: 12,
+                            family: "'Inter', sans-serif"
+                        },
+                        displayColors: true,
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        usePointStyle: true,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                return 'Real-time Stats';
+                            },
+                            label: function (tooltipItem) {
+                                let value = tooltipItem.raw;
+                                if (tooltipItem.dataset.label === 'Bandwidth') {
+                                    return `Bandwidth: ${formatBytes(value)}`;
+                                } else {
+                                    return `Packets/s: ${formatPackets(value)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update stats using config interval
+        setInterval(updateStats, CONFIG.chart.update_interval);
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i] + '/s';
+        }
+
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        const maxDataPoints = 30;
+        const initialData = Array(maxDataPoints).fill(0);
+        
+        const peaks = {
+            bandwidth: 0,
+            pps: 0
+        };
+
+        const runningData = {
+            bandwidth: [],
+            pps: []
+        };
+
+        function calculateRunningAverage(type, value) {
+            runningData[type].push(value);
+            if (runningData[type].length > 60) {
+                runningData[type].shift();
+            }
+            const sum = runningData[type].reduce((a, b) => a + b, 0);
+            return sum / runningData[type].length;
+        }
+
+        function updateStats() {
+            fetch('/stats')
+                .then(response => response.json())
+                .then(data => {
+                    try {
+                        updateStatValue('bandwidth-in', data.bandwidth_in);
+                        updateStatValue('pps-in', data.pps_in);
+
+                        updateChart(data);
+                    } catch (error) {
+                        console.error('Error updating stats:', error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching stats:', error);
+                });
+        }
+
+        function updateStatValue(id, value) {
+            const element = document.getElementById(id);
+            const trend = document.getElementById(id + '-trend');
+            
+            if (!element) {
+                console.warn(`Element with id '${id}' not found`);
+                return;
+            }
+
+            const oldValue = parseFloat(element.textContent.replace(/[^0-9.-]+/g, '')) || 0;
+            
+            const formattedValue = id.includes('bandwidth') ? 
+                formatBytes(value) : 
+                formatNumber(value);
+            
+            element.textContent = formattedValue;
+
+            if (trend) {
+                if (value > oldValue) {
+                    trend.textContent = '↑';
+                    trend.className = 'trend up';
+                } else if (value < oldValue) {
+                    trend.textContent = '↓';
+                    trend.className = 'trend down';
+                }
+            }
+
+            const type = id.includes('bandwidth') ? 'bandwidth' : 'pps';
+            peaks[type] = Math.max(peaks[type], value);
+            
+            const peakElement = document.getElementById(`${type}-peak`);
+            if (peakElement) {
+                peakElement.textContent = type === 'bandwidth' ? 
+                    formatBytes(peaks[type]) : 
+                    formatNumber(peaks[type]);
+            }
+
+            const avgElement = document.getElementById(`${type}-avg`);
+            if (avgElement) {
+                const avg = calculateRunningAverage(type, value);
+                avgElement.textContent = type === 'bandwidth' ? 
+                    formatBytes(Math.round(avg)) : 
+                    formatNumber(Math.round(avg));
+            }
+        }
+
+        function updateChart(data) {
+            try {
+                networkChart.data.datasets[0].data.push(data.bandwidth_in);
+                networkChart.data.datasets[0].data.shift();
+                networkChart.data.datasets[1].data.push(data.pps_in);
+                networkChart.data.datasets[1].data.shift();
+                networkChart.update('active');
+            } catch (error) {
+                console.error('Error updating chart:', error);
+            }
+        }
+
+        document.querySelectorAll('.stat-box').forEach(box => {
+            box.addEventListener('mousemove', (e) => {
+                const rect = box.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                
+                box.style.setProperty('--x', `${x}%`);
+                box.style.setProperty('--y', `${y}%`);
+            });
+        });
+    </script>
+</body>
+</html> 

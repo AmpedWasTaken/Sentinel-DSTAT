@@ -1,0 +1,23 @@
+{
+    "monitoring": {
+        "enabled": true,
+        "interval": 1.0,
+        "store_history": false,
+        "history_file": "network_history.json",
+        "max_history_records": 1000
+    },
+    "network": {
+        "interfaces": ["all"],
+        "bandwidth_units": true,
+        "decimal_places": 2
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "debug": false
+    },
+    "chart": {
+        "max_data_points": 30,
+        "update_interval": 1000
+    }
+} 
